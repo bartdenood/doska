@@ -1,28 +1,30 @@
+import { TEMPLATE_GROUPS } from "@doska/contract"
 import { runtime } from "../../runtime"
 import { TEMPLATES } from "../constants"
+import { sync } from "../sync"
 import { stamp } from "../sync/hlc"
+import { touchTemplate } from "../sync/touch"
 import type { CardDraft } from "./card-draft"
 import { normalizePriority, normalizeTags } from "./card-draft"
 import { newId } from "./new-id"
+import {
+  allTemplates,
+  changedGroups,
+  getStoredTemplate,
+  readTemplate,
+  type CardTemplate,
+} from "./template-record"
+
+export type { CardTemplate }
+export { allTemplates, readTemplate }
 
 const NAME_MAX = 80
 
 /**
- * A reusable starting point for a card. Global on this device: every board
- * offers the same list. Not a board record, and not part of folder or server
- * sync — see `TEMPLATES`.
+ * A reusable starting point for a card. Global across boards, and synced with
+ * the account: server channel `templates.sync`, and `_templates.json` in each
+ * linked folder. Not part of the board or dashboard wire format.
  */
-export interface CardTemplate {
-  id: string
-  /** Label in the chooser and the manager. Not copied onto the card. */
-  name: string
-  title: string
-  body: string
-  tags: string[]
-  priority: string
-  updatedAt: number
-}
-
 export interface TemplateInput {
   name: string
   title: string
@@ -51,7 +53,7 @@ function normalizeName(name: string): string {
 
 function normalizeInput(
   input: TemplateInput
-): Omit<CardTemplate, "id" | "updatedAt"> {
+): Pick<CardTemplate, "name" | "title" | "body" | "tags" | "priority"> {
   return {
     name: normalizeName(input.name),
     title: input.title.trim(),
@@ -61,52 +63,36 @@ function normalizeInput(
   }
 }
 
-/**
- * Reads a stored row, including one written before tags or priority existed.
- * Garbage (no id, no name) is skipped so a bad row can't blank the manager.
- */
-function readTemplate(raw: unknown): CardTemplate | null {
-  if (!raw || typeof raw !== "object") return null
-  const row = raw as Record<string, unknown>
-  if (typeof row.id !== "string" || row.id.length === 0) return null
-  if (typeof row.name !== "string" || row.name.trim().length === 0) return null
-  const tags = Array.isArray(row.tags)
-    ? row.tags.filter((tag): tag is string => typeof tag === "string")
-    : []
-  return {
-    id: row.id,
-    name: row.name.trim(),
-    title: typeof row.title === "string" ? row.title : "",
-    body: typeof row.body === "string" ? row.body : "",
-    tags: normalizeTags(tags),
-    priority: normalizePriority(
-      typeof row.priority === "string" ? row.priority : ""
-    ),
-    updatedAt: typeof row.updatedAt === "number" ? row.updatedAt : 0,
-  }
-}
-
+/** Live templates, by name. Tombstones stay stored so a delete can sync. */
 export async function listTemplates(): Promise<CardTemplate[]> {
-  const rows = await runtime().db.getAll<unknown>(TEMPLATES)
-  return rows
-    .map(readTemplate)
-    .filter((row): row is CardTemplate => row !== null)
+  return (await allTemplates())
+    .filter((template) => template.deletedAt == null)
     .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
 }
 
 export async function getTemplate(id: string): Promise<CardTemplate | null> {
-  return readTemplate(await runtime().db.get<unknown>(TEMPLATES, id))
+  const template = await getStoredTemplate(id)
+  if (!template || template.deletedAt != null) return null
+  return template
 }
 
 export async function createTemplate(
   input: TemplateInput
 ): Promise<CardTemplate> {
-  const template: CardTemplate = {
-    id: newId("tpl"),
-    ...normalizeInput(input),
-    updatedAt: stamp(),
-  }
+  const now = stamp()
+  const template = touchTemplate(
+    {
+      id: newId("tpl"),
+      ...normalizeInput(input),
+      updatedAt: now,
+      deletedAt: null,
+      stamps: {},
+    },
+    TEMPLATE_GROUPS,
+    now
+  )
   await runtime().db.set(TEMPLATES, template.id, template)
+  sync.markDirty(TEMPLATES, template.id)
   return template
 }
 
@@ -116,17 +102,23 @@ export async function updateTemplate(
 ): Promise<CardTemplate> {
   const existing = await getTemplate(id)
   if (!existing) throw new Error("That template was deleted.")
-  const template: CardTemplate = {
-    ...normalizeInput(input),
-    id,
-    updatedAt: stamp(),
-  }
+  const next = normalizeInput(input)
+  const groups = changedGroups(existing, next)
+  if (groups.length === 0) return existing
+  const template = touchTemplate({ ...existing, ...next }, groups)
   await runtime().db.set(TEMPLATES, id, template)
+  sync.markDirty(TEMPLATES, id)
   return template
 }
 
+/** Tombstones a template. A hard delete would not reach other devices. */
 export async function deleteTemplate(id: string): Promise<void> {
-  await runtime().db.delete(TEMPLATES, id)
+  const existing = await getStoredTemplate(id)
+  if (!existing || existing.deletedAt != null) return
+  const now = stamp()
+  const dead = touchTemplate({ ...existing, deletedAt: now }, ["deleted"], now)
+  await runtime().db.set(TEMPLATES, id, dead)
+  sync.markDirty(TEMPLATES, id)
 }
 
 function copyName(name: string, taken: Set<string>): string {

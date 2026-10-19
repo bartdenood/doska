@@ -22,8 +22,8 @@ class DeckDB extends IDB {
     // The meta store persists across upgrades — only create it if missing.
     if (!db.objectStoreNames.contains(META_STORE))
       db.createObjectStore(META_STORE)
-    // Templates are local user data, not a synced store. Missing on older
-    // databases; an empty store is the whole migration.
+    // Templates live in their own store. Missing on older databases; an empty
+    // store is the whole migration. Sync is a separate channel, not this schema.
     if (!db.objectStoreNames.contains(TEMPLATES))
       db.createObjectStore(TEMPLATES)
 

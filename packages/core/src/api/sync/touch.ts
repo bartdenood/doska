@@ -1,8 +1,11 @@
 import {
   CARD_GROUPS,
   COLUMN_GROUPS,
+  TEMPLATE_GROUPS,
   type CardGroup,
+  type CardTemplate,
   type ColumnGroup,
+  type TemplateGroup,
 } from "@doska/contract"
 import type { Card, Column } from "../../types"
 import { stamp } from "./hlc"
@@ -44,4 +47,12 @@ export function touchColumn(
   at = stamp()
 ): Column {
   return touch(column, COLUMN_GROUPS, groups, at)
+}
+
+export function touchTemplate(
+  template: CardTemplate,
+  groups: readonly TemplateGroup[],
+  at = stamp()
+): CardTemplate {
+  return touch(template, TEMPLATE_GROUPS, groups, at)
 }

@@ -13,6 +13,6 @@ updated: "2026-10-19"
 - [Attachments](/user-guides/attachments): put files and images on a card.
   Needs a server.
 - [Card templates](/user-guides/card-templates): start a card from a saved
-  title, body, tags, and priority. Works offline.
+  title, body, tags, and priority. Works offline, and syncs with the account.
 - [Single sign-on](/user-guides/sso): let people sign in through your
   identity provider. Needs a server.

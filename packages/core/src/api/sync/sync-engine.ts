@@ -6,13 +6,18 @@ import {
 } from "@doska/sync"
 import { ORPCError } from "@orpc/client"
 import type { StoreName } from "../constants"
-import { DASHBOARDS, HISTORY, SIDEBAR } from "../constants"
+import { DASHBOARDS, HISTORY, SIDEBAR, TEMPLATES } from "../constants"
 import { DeckSyncDriver } from "./drivers/board-driver"
 import {
   DashboardListDriver,
   DASHBOARDS_SCOPE,
 } from "./drivers/dashboard-list-driver"
 import { HistoryDriver, HISTORY_SCOPE } from "./drivers/history-driver"
+import {
+  TemplateDriver,
+  TEMPLATES_SCOPE,
+  TemplatesChannelMissing,
+} from "./drivers/template-driver"
 import { dropBoardLocally } from "../operations/drop-board-locally"
 import { isAuthed, subscribeAuthed } from "../../utils"
 import { runtime } from "../../runtime"
@@ -44,10 +49,18 @@ export const classify = (err: unknown): SyncFailure => {
 
 const LIST_STORES: StoreName[] = [DASHBOARDS, SIDEBAR]
 
+/**
+ * An older server has no `templates.sync`. Retrying it on the background tick
+ * would report the whole connection as down, so a miss backs off and the dirty
+ * templates stay queued for the next try.
+ */
+const TEMPLATES_RETRY_MS = 60_000
+
 const createDrivers = (onRemoved: (boardId: string) => Promise<void>) => ({
   board: new DeckSyncDriver(),
   list: new DashboardListDriver(onRemoved),
   history: new HistoryDriver(),
+  templates: new TemplateDriver(),
 })
 
 /**
@@ -67,17 +80,25 @@ function mergeLastSynced(times: (number | null)[]): number | null {
 }
 
 /**
- * The one sync facade the app drives. Runs three independent engines: the board
- * engine (scoped to the open board), and the always-active dashboard-list and
- * history engines. All are rebuilt when the server URL changes, reusing the same dirty queues so
- * pending edits flush to whichever server is now active. Callers don't pick a
- * channel — {@link markDirty} routes by store and the UI sees one merged
- * {@link SyncState}. Singleton.
+ * The one sync facade the app drives. Runs four independent engines: the board
+ * engine (scoped to the open board), and the always-active dashboard-list,
+ * history, and template engines. All are rebuilt when the server URL changes,
+ * reusing the same dirty queues so pending edits flush to whichever server is
+ * now active. Callers don't pick a channel — {@link markDirty} routes by store
+ * and the UI sees one merged {@link SyncState}. Singleton.
  */
 class DeckSync {
   private board!: SyncEngine<string, never>
   private list!: SyncEngine<string, never>
   private history!: SyncEngine<string, never>
+  private templates!: SyncEngine<string, never>
+
+  /**
+   * Set when this server has no templates channel. The engine is left out of
+   * the merged status until the backoff passes, so board sync stays healthy.
+   */
+  private templatesQuiet = false
+  private templatesRetryAt = 0
 
   /** The open board, remembered so a rebuild can re-point the new engine. */
   private currentBoard: string | null = null
@@ -106,7 +127,9 @@ class DeckSync {
 
   // Safe to call repeatedly; the old engines are simply dropped.
   private rebuild() {
-    const { board, list, history } = createDrivers((boardId) =>
+    this.templatesQuiet = false
+    this.templatesRetryAt = 0
+    const { board, list, history, templates } = createDrivers((boardId) =>
       this.forget(boardId)
     )
     // The generic engine is Change-shaped per channel; the facade only routes
@@ -130,12 +153,25 @@ class DeckSync {
       canSync,
       classify,
     }) as unknown as SyncEngine<string, never>
+    this.templates = new SyncEngine(templates, {
+      kv: runtime().kv,
+      storageKey: "deck:sync:dirty:templates",
+      canSync,
+      classify: (err) =>
+        err instanceof TemplatesChannelMissing ? "forbidden" : classify(err),
+      onForbidden: () => {
+        this.templatesQuiet = true
+        this.templatesRetryAt = Date.now() + TEMPLATES_RETRY_MS
+      },
+    }) as unknown as SyncEngine<string, never>
 
     this.board.subscribe(() => this.recompute())
     this.list.subscribe(() => this.recompute())
     this.history.subscribe(() => this.recompute())
+    this.templates.subscribe(() => this.recompute())
     this.list.setActiveScope(DASHBOARDS_SCOPE)
     this.history.setActiveScope(HISTORY_SCOPE)
+    this.templates.setActiveScope(TEMPLATES_SCOPE)
     this.board.watchScopes(this.watchedBoards)
     this.board.setActiveScope(this.currentBoard)
 
@@ -149,6 +185,7 @@ class DeckSync {
       this.list.getState(),
       this.history.getState(),
     ]
+    if (!this.templatesQuiet) states.push(this.templates.getState())
     const prev = this.state
     const next: SyncState = {
       status: mergeStatus(states.map((state) => state.status)),
@@ -178,22 +215,23 @@ class DeckSync {
 
   getState = (): SyncState => this.state
 
-  markDirty(store: StoreName, key: string) {
+  markDirty(store: StoreName | typeof TEMPLATES, key: string) {
     this.engineFor(store).mark(`${store}/${key}`)
   }
 
   /** Whether a record still owes the server a push — see `purgeExpired`. */
-  isDirty(store: StoreName, key: string): boolean {
+  isDirty(store: StoreName | typeof TEMPLATES, key: string): boolean {
     return this.engineFor(store).dirty.has(`${store}/${key}`)
   }
 
-  private engineFor(store: StoreName) {
+  private engineFor(store: StoreName | typeof TEMPLATES) {
     if (store === HISTORY) return this.history
+    if (store === TEMPLATES) return this.templates
     return LIST_STORES.includes(store) ? this.list : this.board
   }
 
   /** Abandons these records' pending refs, routed to the channel that holds them. */
-  dropDirty(store: StoreName, ids: string[]) {
+  dropDirty(store: StoreName | typeof TEMPLATES, ids: string[]) {
     this.engineFor(store).dropDirty(ids.map((id) => `${store}/${id}`))
   }
 
@@ -212,6 +250,7 @@ class DeckSync {
     this.board.clearDirty()
     this.list.clearDirty()
     this.history.clearDirty()
+    this.templates.clearDirty()
   }
 
   /**
@@ -223,8 +262,12 @@ class DeckSync {
     this.board.reset()
     this.list.reset()
     this.history.reset()
+    this.templatesQuiet = false
+    this.templatesRetryAt = 0
+    this.templates.reset()
     this.list.setActiveScope(DASHBOARDS_SCOPE)
     this.history.setActiveScope(HISTORY_SCOPE)
+    this.templates.setActiveScope(TEMPLATES_SCOPE)
   }
 
   /**
@@ -233,8 +276,22 @@ class DeckSync {
    * overtook its board push would come straight back dead. Serialising costs a
    * round-trip on a background poll; the ordering is a correctness property.
    */
+  /**
+   * Templates are independent of boards. An older server 404s this channel;
+   * backing off keeps that from looking like a failed board sync, and the
+   * queued edits stay dirty until a server that understands them answers.
+   */
+  private async syncTemplates(): Promise<void> {
+    if (this.templatesQuiet && Date.now() < this.templatesRetryAt) return
+    if (this.templatesQuiet) {
+      this.templatesQuiet = false
+      this.templates.setActiveScope(TEMPLATES_SCOPE)
+    }
+    await this.templates.reconcile()
+  }
+
   private async listFirst(run: () => Promise<void>): Promise<void> {
-    await this.list.reconcile()
+    await Promise.all([this.syncTemplates(), this.list.reconcile()])
     // After the list, so a new board exists on the server before its rows land.
     await this.history.reconcile()
     await run()

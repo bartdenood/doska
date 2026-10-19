@@ -18,6 +18,7 @@ import {
   boardSync,
   boardsListSync,
   historySync,
+  templatesSync,
   listRoster,
   listSharedBoards,
   revokeAllMemberships,
@@ -68,6 +69,12 @@ export const router = os.router({
     sync: os.history.sync.handler(async ({ input, context }) => {
       await historySync.applyPush(input.changes, context.userId)
       return historySync.readSince(input.since, context.userId)
+    }),
+  },
+  templates: {
+    sync: os.templates.sync.handler(async ({ input, context }) => {
+      await templatesSync.applyPush(input.changes, context.userId)
+      return templatesSync.readSince(input.since, context.userId)
     }),
   },
   boards: {
@@ -124,7 +131,9 @@ export const router = os.router({
     }),
   },
   users: {
-    list: os.users.list.handler(async () => ({ users: await listActiveUsers() })),
+    list: os.users.list.handler(async () => ({
+      users: await listActiveUsers(),
+    })),
   },
   accounts: {
     ownedBoards: os.accounts.ownedBoards.handler(async ({ input, context }) => {

@@ -132,8 +132,9 @@ Tools are listed in [packages/mcp/README.md](packages/mcp/README.md); setup is a
 Settings → **Card templates** saves a reusable title, Markdown body, tags, and
 priority. Templates are global across every board and live in the local
 database (IndexedDB on web and desktop, SQLite on mobile), so they survive
-reloads. They are not part of folder or server sync: those channels carry
-board records, and mixing templates in would change the sync format.
+reloads. Signed in, they sync with the account on their own channel, and a
+linked folder carries them in `_templates.json`. Older clients never see that
+channel, and they ignore the file, so existing boards keep syncing.
 
 The add-card button still creates a blank card in one click. After you save a
 template, the control beside it lists your templates.

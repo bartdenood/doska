@@ -26,7 +26,7 @@ Then choose the folder:
 
 After the folder is selected, it will hold the columns as folders, and the cards as Markdown files. They sync both ways.
 
-There will also be special folders: `_trash` and `_files`.
+There will also be special folders: `_trash` and `_files`. The folder root holds `_templates.json` as well: the account's card templates, the same list in every linked board folder. An older app ignores that file.
 
 - **Trash folder** holds recently deleted cards. Cards deleted in the app land there first, so they can be restored via the app, or manually by dragging the file back.
 - **Files folder** holds the board's [attachments](/user-guides/attachments).

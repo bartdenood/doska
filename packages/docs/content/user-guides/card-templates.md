@@ -14,7 +14,11 @@ Templates are global. The same list is offered on every board on this device.
 
 They live in the local database, next to your boards: IndexedDB on the web and desktop apps, SQLite on mobile. They survive a reload.
 
-They do not travel with folder sync or server sync. Those channels sync board records (columns and cards). A template is not a card, and adding it to that format would break older clients. Signing in as a different account on the same device clears them, the same way it clears that account's boards. The first sign-in on a device keeps templates you created before you signed in.
+They sync with the account. Signed in, a template saved on one device shows up on the others. On the desktop app, every folder a board is linked to gets a `_templates.json` at its root with that same list. An older app ignores the file and never asks the server for templates, so it keeps syncing boards and does not delete them.
+
+Signing in as a different account on the same device clears them, the same way it clears that account's boards. The first sign-in on a device keeps templates you created before you signed in, and uploads them.
+
+Two devices can edit one template at the same time. The name, title, body, tags, and priority each keep the newer edit. A delete works the same way: it catches up on the other device, and a newer edit of a different field is kept on the deleted template. Cards already created from it stay as they are.
 
 ## Manage templates
 
@@ -23,7 +27,7 @@ Open **Settings** and choose **Card templates**.
 - **New template** asks for a name, then the card's title, body, tags, and priority.
 - **Edit** (select the template) changes any of those, including the name. That is how you rename one.
 - **Duplicate** copies the card fields under a new name, then opens the copy.
-- **Delete** removes the template from this device. Cards you already created from it stay as they are.
+- **Delete** removes the template. Cards you already created from it stay as they are. The delete syncs to your other devices.
 
 ## New card
 

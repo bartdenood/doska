@@ -145,6 +145,53 @@ export const COLUMN_FIELD_GROUP: Record<
   deletedAt: "deleted",
 }
 
+/**
+ * Card templates. Account-level, like the sidebar: not a board record.
+ *
+ * Kept off `ChangeSchema` and `DashboardChangeSchema` on purpose. Those are
+ * closed unions, and a new `store` value fails the parse on a client that
+ * doesn't know about templates. Templates travel on their own channel.
+ */
+export const TEMPLATE_GROUPS = [
+  "name",
+  "title",
+  "body",
+  "tags",
+  "priority",
+  "deleted",
+] as const
+
+export type TemplateGroup = (typeof TEMPLATE_GROUPS)[number]
+
+export const CardTemplateSchema = z.object({
+  id: z.string(),
+  /** Label in the chooser. Not copied onto the card. */
+  name: z.string(),
+  title: z.string().default(""),
+  body: z.string().default(""),
+  tags: z.array(z.string()).default([]),
+  /** `high` / `medium` / `low`, empty for none. */
+  priority: z.string().default(""),
+  updatedAt: z.number(),
+  deletedAt: z.number().nullable().default(null),
+  stamps: z.partialRecord(z.enum(TEMPLATE_GROUPS), z.number()).default({}),
+})
+
+export const TEMPLATE_FIELD_GROUP: Record<
+  Exclude<
+    keyof z.infer<typeof CardTemplateSchema>,
+    "id" | "updatedAt" | "stamps"
+  >,
+  TemplateGroup
+> = {
+  name: "name",
+  title: "title",
+  body: "body",
+  tags: "tags",
+  priority: "priority",
+  deletedAt: "deleted",
+}
+
 export const DashboardSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -245,11 +292,18 @@ const SidebarChangeSchema = z.object({
 })
 
 /** A change on the account-level channel (see `dashboards.sync`): a dashboard
- * or the caller's sidebar layout. */
+ * or the caller's sidebar layout. Templates are not in this union. */
 export const DashboardChangeSchema = z.discriminatedUnion("store", [
   DashboardRecordChangeSchema,
   SidebarChangeSchema,
 ])
+
+/** A change on the templates channel. Its own procedure, so a client that
+ * doesn't know the channel never has to parse one. */
+export const TemplateChangeSchema = z.object({
+  store: z.literal("templates"),
+  record: CardTemplateSchema,
+})
 
 /** One board-channel record change, tagged by the store it belongs to. */
 export const ChangeSchema = z.discriminatedUnion("store", [

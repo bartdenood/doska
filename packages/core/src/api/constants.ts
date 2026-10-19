@@ -7,12 +7,15 @@ export const SIDEBAR_LAYOUT_ID = "layout"
 export const HISTORY = "history"
 
 /**
- * Card templates. Kept out of `STORES` on purpose: that list is the sync
- * boundary (board, dashboard, and history channels). Templates are global on
- * this device, not board records, and pushing them would change the wire
- * format peers already understand.
+ * Card templates. Kept out of `STORES` on purpose: that list is what the board,
+ * dashboard, and history channels push. Templates have their own channel and
+ * their own dirty queue, so an older client never sees them on the channels it
+ * already parses.
  */
 export const TEMPLATES = "templates"
+
+/** Set once the device has offered its pre-sync templates to the server. */
+export const TEMPLATES_MIGRATED_KEY = "templates:migrated"
 
 export const STORES = [CARDS, COLUMNS, DASHBOARDS, SIDEBAR, HISTORY] as const
 export type StoreName = (typeof STORES)[number]

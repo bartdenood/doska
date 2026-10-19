@@ -1,5 +1,6 @@
 import { keys } from "@doska/core"
 import { Vault } from "@doska/vault"
+import { vaultTemplates } from "./template-ops"
 import { useQueryClient } from "@tanstack/react-query"
 import { createElement, useCallback, useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
@@ -97,6 +98,11 @@ export function useVault(boardId: string) {
       boardId,
       files: vaultFiles,
       root: path,
+      templates: vaultTemplates(),
+      onTemplatesChange: () => {
+        setError(null)
+        void qc.invalidateQueries({ queryKey: keys.templates })
+      },
       onError: (cause) => setError(message(cause)),
       onBoardChange: () => {
         setError(null)
@@ -113,7 +119,8 @@ export function useVault(boardId: string) {
 
     const off = qc.getQueryCache().subscribe((event) => {
       if (event.type !== "updated" || event.action.type !== "success") return
-      if (event.query.queryKey[0] !== keys.boards[0]) return
+      const head = event.query.queryKey[0]
+      if (head !== keys.boards[0] && head !== keys.templates[0]) return
       vault
         .sync()
         .then(() => setError(null))

@@ -1,6 +1,7 @@
 import type {
   Attachment,
   Card,
+  CardTemplate,
   Column,
   HistoryEntry,
   MemberRole,
@@ -33,6 +34,8 @@ export * from "./auth-schema"
  * Each board keeps its per-board tick under id `board:<id>`; the dashboard list
  * uses id `"dashboards"` for an account-level ordering, letting a client pull
  * every board's metadata past its cursor regardless of which board is open.
+ * Card templates use id `"templates"`, their own counter, so a client that
+ * never calls that channel is unaffected by template writes.
  */
 export const counters = pgTable("counters", {
   id: text("id").primaryKey(),
@@ -147,6 +150,37 @@ export const boardMembers = pgTable(
   (t) => [
     primaryKey({ columns: [t.boardId, t.userId] }),
     index("board_members_user_seq").on(t.userId, t.seq),
+  ]
+)
+
+/**
+ * Card templates for one account. Keyed by user so a push can only land on the
+ * caller's rows, and so two accounts can reuse an id without colliding.
+ * `seq` is from the templates counter, not the board-list one: template writes
+ * must not advance a cursor an older client is pulling dashboards with.
+ * Deletes are tombstones (`deletedAt`), merged per field group like cards.
+ */
+export const cardTemplates = pgTable(
+  "card_templates",
+  {
+    userId: text("user_id").notNull(),
+    id: text("id").notNull(),
+    name: text("name").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    priority: text("priority").notNull().default(""),
+    updatedAt: bigint("updated_at", { mode: "number" }).notNull(),
+    deletedAt: bigint("deleted_at", { mode: "number" }),
+    stamps: jsonb("stamps")
+      .$type<CardTemplate["stamps"]>()
+      .notNull()
+      .default({}),
+    seq: integer("seq").notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.id] }),
+    index("card_templates_user_seq").on(t.userId, t.seq),
   ]
 )
 

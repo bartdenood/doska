@@ -1,6 +1,12 @@
 import { runtime } from "../runtime"
 import { clearLastBoard } from "../data/last-board"
-import { DASHBOARDS, META_STORE, STORES, TEMPLATES } from "./constants"
+import {
+  DASHBOARDS,
+  META_STORE,
+  STORES,
+  TEMPLATES,
+  TEMPLATES_MIGRATED_KEY,
+} from "./constants"
 import { live } from "./operations/live"
 import { getServerUrl } from "./server"
 import { sync } from "./sync"
@@ -73,8 +79,12 @@ export async function reconcileIdentity(
  */
 async function wipe(): Promise<void> {
   for (const store of STORES) await runtime().db.clear(store)
-  // Same lifetime as the account's boards on this device. Not a synced store.
+  // Same lifetime as the account's boards. The channel is separate, but the
+  // rows belong to whoever is signed in. Clearing the migration flag lets the
+  // next account offer whatever is still here — which, after the clear, is
+  // nothing until its own pull lands.
   await runtime().db.clear(TEMPLATES)
+  await runtime().db.delete(META_STORE, TEMPLATES_MIGRATED_KEY)
 
   const cursors = await runtime().db.keys(META_STORE, CURSOR_RANGE)
   for (const key of cursors) await runtime().db.delete(META_STORE, key)

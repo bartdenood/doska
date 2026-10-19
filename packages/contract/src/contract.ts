@@ -7,17 +7,20 @@ import {
   HistoryEntrySchema,
   MemberRoleSchema,
   MemberSchema,
+  TemplateChangeSchema,
 } from "./schemas"
 
 /**
- * The sync contract. Three channels, each push-then-pull with a `since` cursor:
+ * The sync contract. Four channels, each push-then-pull with a `since` cursor:
  *
  *  - `board.sync`: a single board's columns and cards, scoped by `boardId`.
  *  - `dashboards.sync`: the dashboard list, account-level and board-independent,
  *    so other boards' create/rename/delete reach a client whatever board is open.
  *  - `history.sync`: the action log of every board the account can read.
+ *  - `templates.sync`: the account's card templates. Its own channel so a client
+ *    that doesn't know templates never receives them and can't strip them.
  *
- * In all three: push the client's locally-changed records in `changes`; pull every
+ * In all four: push the client's locally-changed records in `changes`; pull every
  * record changed past the client's `since` cursor, plus the new high-water `cursor`.
  *
  * `members` and `users` are not channels. They are ordinary request/response
@@ -70,6 +73,21 @@ export const contract = {
         z.object({
           cursor: z.number(),
           changes: z.array(HistoryEntrySchema),
+        })
+      ),
+  },
+  templates: {
+    sync: oc
+      .input(
+        z.object({
+          since: z.number(),
+          changes: z.array(TemplateChangeSchema),
+        })
+      )
+      .output(
+        z.object({
+          cursor: z.number(),
+          changes: z.array(TemplateChangeSchema),
         })
       ),
   },

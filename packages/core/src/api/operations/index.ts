@@ -47,6 +47,7 @@ export { getCard } from "./get-card"
 export { createCard } from "./create-card"
 export type { CardDraft } from "./card-draft"
 export {
+  allTemplates,
   cardDraftFromTemplate,
   createTemplate,
   deleteTemplate,

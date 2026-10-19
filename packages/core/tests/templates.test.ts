@@ -80,6 +80,8 @@ describe("templates", () => {
         tags: [],
         priority: "",
         updatedAt: 0,
+        deletedAt: null,
+        stamps: {},
       },
     ])
   })
