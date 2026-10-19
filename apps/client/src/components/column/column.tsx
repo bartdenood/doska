@@ -1,4 +1,5 @@
 import { Droppable } from "@hello-pangea/dnd"
+import type { CardDraft } from "@doska/core"
 import { useState, type ReactNode } from "react"
 import { ConfirmDialog } from "../confirm-dialog"
 import { ColumnMenu } from "./column-menu"
@@ -11,7 +12,7 @@ interface IProps {
   color: string
   showBody: boolean
   onToggleBody: () => void
-  onAddCard?: () => void
+  onAddCard?: (draft?: CardDraft) => void
   addCardDisabledReason?: string
   onRename: (title: string) => void
   onChangeColor: (color: string) => void

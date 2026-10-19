@@ -2,7 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { KeyRange } from "@doska/ports"
 import type { Runtime } from "../src/runtime"
 import { installRuntime } from "../src/runtime"
-import { CARDS, COLUMNS, DASHBOARDS, META_STORE } from "../src/api/constants"
+import {
+  CARDS,
+  COLUMNS,
+  DASHBOARDS,
+  META_STORE,
+  TEMPLATES,
+} from "../src/api/constants"
 
 /** An in-memory `ClientDB`, keyed `store/key` like the hlc test's. */
 const rows = new Map<string, unknown>()
@@ -104,6 +110,7 @@ describe("reconcileIdentity", () => {
 
   it("wipes records, cursors and dirty queues when a different user signs in", async () => {
     seedAccountA()
+    rows.set(`${TEMPLATES}/tpl-a`, { id: "tpl-a", name: "Bug" })
     kvStore.set("doska:last-board", "board-a")
 
     const { reconcileIdentity } = await import("../src/api/identity")
@@ -112,6 +119,7 @@ describe("reconcileIdentity", () => {
     expect(inStore(CARDS)).toEqual([])
     expect(inStore(COLUMNS)).toEqual([])
     expect(inStore(DASHBOARDS)).toEqual([])
+    expect(inStore(TEMPLATES)).toEqual([])
     expect(inStore(META_STORE).sort()).toEqual(["deck:user-id", "hlc:last"])
     expect(rows.get(`${META_STORE}/deck:user-id`)).toBe("user-b")
     // The clock is this device's, not the account's — a regression here issues
@@ -139,11 +147,13 @@ describe("reconcileIdentity", () => {
       updatedAt: 5,
       deletedAt: null,
     })
+    rows.set(`${TEMPLATES}/tpl-local`, { id: "tpl-local", name: "Bug" })
 
     const { reconcileIdentity } = await import("../src/api/identity")
     expect(await reconcileIdentity("user-a")).toBe(false)
 
     expect(inStore(DASHBOARDS)).toEqual(["local"])
+    expect(inStore(TEMPLATES)).toEqual(["tpl-local"])
     expect(rows.get(`${META_STORE}/deck:user-id`)).toBe("user-a")
     expect(reset).not.toHaveBeenCalled()
   })

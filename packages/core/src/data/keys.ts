@@ -16,6 +16,7 @@ export const keys = {
   history: (entityId: string) => ["history", entityId] as const,
   /** The bare key is the invalidation prefix for every filter's digest. */
   digest: ["digest"] as const,
+  templates: ["templates"] as const,
   digestFilter: (filter: DigestFilter) => ["digest", filter] as const,
   cardDeck: (id: string) => ["card-deck", id] as const,
   /** The bare key is the invalidation prefix for every card's column. */

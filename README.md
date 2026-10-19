@@ -58,6 +58,7 @@ Doska never makes you wait on the server, doesn't keep features behind a paywall
 - **Cross-board deadlines view**
 - **Quick note window**: always on top, opened with a keyboard shortcut
 - **Tags**
+- **Card templates**: reuse a title, Markdown body, tags, and priority
 - **Assign users** to cards
 - **Activity history view**
 
@@ -125,6 +126,17 @@ claude mcp add --transport http doska https://your-server/mcp
 
 Tools are listed in [packages/mcp/README.md](packages/mcp/README.md); setup is at
 [doska.sh/docs/mcp](https://doska.sh/docs/mcp).
+
+## Card templates
+
+Settings → **Card templates** saves a reusable title, Markdown body, tags, and
+priority. Templates are global across every board and live in the local
+database (IndexedDB on web and desktop, SQLite on mobile), so they survive
+reloads. They are not part of folder or server sync: those channels carry
+board records, and mixing templates in would change the sync format.
+
+The add-card button still creates a blank card in one click. After you save a
+template, the control beside it lists your templates.
 
 ## Development
 

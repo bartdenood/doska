@@ -6,6 +6,14 @@ export const SIDEBAR = "sidebar"
 export const SIDEBAR_LAYOUT_ID = "layout"
 export const HISTORY = "history"
 
+/**
+ * Card templates. Kept out of `STORES` on purpose: that list is the sync
+ * boundary (board, dashboard, and history channels). Templates are global on
+ * this device, not board records, and pushing them would change the wire
+ * format peers already understand.
+ */
+export const TEMPLATES = "templates"
+
 export const STORES = [CARDS, COLUMNS, DASHBOARDS, SIDEBAR, HISTORY] as const
 export type StoreName = (typeof STORES)[number]
 

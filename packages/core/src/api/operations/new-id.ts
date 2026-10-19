@@ -6,7 +6,7 @@ import { v4 as uuid } from "uuid"
  * opaque and never read aloud makes plenty. The card number is the id people say.
  */
 export function newId(
-  kind: "board" | "col" | "card" | "folder" | "hist"
+  kind: "board" | "col" | "card" | "folder" | "hist" | "tpl"
 ): string {
   // The dashes first: a bare slice would eat the one at position 8 and leave
   // 11 hex digits, not 12.

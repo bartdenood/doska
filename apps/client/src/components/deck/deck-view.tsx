@@ -13,6 +13,7 @@ import {
   useSetColumnColor,
   useSetColumnDone,
   useSetDashboardSort,
+  type CardDraft,
   type CardPatch,
   useBoard,
   setBoardView,
@@ -51,6 +52,14 @@ export function DeckView({ dashboard }: { dashboard: Dashboard }) {
   const view = useBoardView(id)
 
   const { mutate: createCard } = useCreateCard(id)
+
+  function addCard(columnId: string, draft?: CardDraft, open = false) {
+    createCard(draft ? { columnId, draft } : columnId, {
+      onSuccess: (cardId) => {
+        if (open) navigate(routes.card.to(cardId))
+      },
+    })
+  }
   const { mutate: moveCard } = useMoveCard(id)
   const { mutate: moveCardToBoard } = useMoveCardToBoard(id)
   const { mutate: createColumn } = useCreateColumn(id)
@@ -81,12 +90,8 @@ export function DeckView({ dashboard }: { dashboard: Dashboard }) {
       onToggleBody={(columnId, collapsed) =>
         setColumnCollapsed({ id: columnId, collapsed })
       }
-      onAddCard={createCard}
-      onAddAndOpenCard={(columnId) =>
-        createCard(columnId, {
-          onSuccess: (cardId) => navigate(routes.card.to(cardId)),
-        })
-      }
+      onAddCard={(columnId, draft) => addCard(columnId, draft, !!draft)}
+      onAddAndOpenCard={(columnId, draft) => addCard(columnId, draft, true)}
       onAddColumn={() => createColumn("New column")}
       onReorderColumns={moveColumn}
       onChangeColumnColor={(columnId, color) =>

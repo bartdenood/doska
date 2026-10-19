@@ -1,14 +1,26 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import * as api from "../../api/operations"
+import type { CardDraft } from "../../api/operations"
 import type { Card } from "../../types"
 import { pushUndo } from "../../undo"
 import { cardWriteKeys, keys } from "../keys"
 import { replaceById, useBoardPatch } from "./board-patch"
 
+/** A column id, or that id plus a template's fields. A string stays the blank card. */
+export type CreateCardVars =
+  | string
+  | {
+      columnId: string
+      draft?: CardDraft
+    }
+
 export function useCreateCard(deckId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (columnId: string) => api.createCard(columnId),
+    mutationFn: (vars: CreateCardVars) =>
+      typeof vars === "string"
+        ? api.createCard(vars)
+        : api.createCard(vars.columnId, vars.draft),
     onSettled: () => qc.invalidateQueries({ queryKey: keys.board(deckId) }),
   })
 }

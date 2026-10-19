@@ -8,10 +8,11 @@ import {
   HISTORY_BY_ENTITY,
   META_STORE,
   STORES,
+  TEMPLATES,
 } from "@doska/core"
 
 const DB_NAME = "deck"
-const VERSION = 14
+const VERSION = 15
 
 class DeckDB extends IDB {
   upgrade(db: IDBDatabase, tx: IDBTransaction) {
@@ -21,6 +22,10 @@ class DeckDB extends IDB {
     // The meta store persists across upgrades — only create it if missing.
     if (!db.objectStoreNames.contains(META_STORE))
       db.createObjectStore(META_STORE)
+    // Templates are local user data, not a synced store. Missing on older
+    // databases; an empty store is the whole migration.
+    if (!db.objectStoreNames.contains(TEMPLATES))
+      db.createObjectStore(TEMPLATES)
 
     // Add the column index to the (possibly pre-existing) cards store. The
     // versionchange `tx` is how we reach a store that wasn't just created.

@@ -1,5 +1,5 @@
 import { CardContent, Modal, ModalContent, ModalHeader } from "@doska/ui-kit"
-import { BookOpen, Users } from "lucide-react"
+import { BookOpen, LayoutTemplate, Users } from "lucide-react"
 import { FaGithub } from "react-icons/fa"
 import { useAuth } from "@/lib/hooks"
 import { SettingsSection } from "./section"
@@ -12,9 +12,15 @@ interface IProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onOpenAccounts: () => void
+  onOpenTemplates: () => void
 }
 
-export function SettingsModal({ open, onOpenChange, onOpenAccounts }: IProps) {
+export function SettingsModal({
+  open,
+  onOpenChange,
+  onOpenAccounts,
+  onOpenTemplates,
+}: IProps) {
   const { isAdmin } = useAuth()
 
   return (
@@ -25,6 +31,17 @@ export function SettingsModal({ open, onOpenChange, onOpenAccounts }: IProps) {
           <UpdatesSection />
           <CardViewSection />
           <QuickNoteSection />
+          <SettingsSection title="Templates">
+            <SettingsRow
+              icon={<LayoutTemplate className="size-4" />}
+              label="Card templates"
+              onClick={onOpenTemplates}
+            />
+            <p className="px-2 text-xs text-muted-foreground">
+              Reuse a title, body, tags and priority. Blank cards stay one
+              click.
+            </p>
+          </SettingsSection>
           <SettingsSection>
             <div className="flex flex-col">
               {isAdmin && (

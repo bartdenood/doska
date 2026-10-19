@@ -1,12 +1,12 @@
-import { Button, InvisibleInput } from "@doska/ui-kit"
-import { Plus } from "lucide-react"
+import type { CardDraft, Column, DashboardView } from "@doska/core"
+import { InvisibleInput } from "@doska/ui-kit"
+import { AddCardControl } from "@/components/templates/add-card-control"
 import { PageHeader } from "../../app/page-header"
 import { BoardActionsMenu } from "./board-actions-menu"
 import { SearchButton } from "./search-button"
 import { RowViewButton } from "./row-view-button"
 import { ShareButton } from "./share-button"
 import { UserFilter } from "./user-filter"
-import type { Column, DashboardView } from "@doska/core"
 import { VaultButton } from "./vault-button"
 import { isDesktop } from "@/lib/platform"
 
@@ -21,7 +21,7 @@ interface IProps {
   onReorderColumns: (changed: Column[]) => void
   onChangeSort: (sort: string[]) => void
   onChangeView: (view: DashboardView) => void
-  onAddCard: () => void
+  onAddCard: (draft?: CardDraft) => void
   addCardDisabledReason?: string
 }
 
@@ -50,17 +50,13 @@ export function DeckHeader({
 
       <div className="ml-auto flex items-center gap-1">
         <UserFilter boardId={boardId} />
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Add card"
-          className="text-muted-foreground"
-          onClick={onAddCard}
-          disabled={!!addCardDisabledReason}
-          tooltip={addCardDisabledReason ?? true}
-        >
-          <Plus />
-        </Button>
+        <AddCardControl
+          appearance="header"
+          label="Add card"
+          menuLabel="Add card from template"
+          disabledReason={addCardDisabledReason}
+          onCreate={onAddCard}
+        />
         <SearchButton boardId={boardId} />
         <RowViewButton view={view} onChangeView={onChangeView} />
         <ShareButton boardId={boardId} title={title} />

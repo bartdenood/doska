@@ -1,11 +1,11 @@
 import type { DroppableProvidedProps } from "@hello-pangea/dnd"
-import { createElement, type ReactNode, type Ref } from "react"
-import { toast } from "react-hot-toast"
+import type { CardDraft } from "@doska/core"
+import { type ReactNode, type Ref } from "react"
 import { Button, cn } from "@doska/ui-kit"
-import { Check, FoldVertical, Plus, UnfoldVertical } from "lucide-react"
+import { Check, FoldVertical, UnfoldVertical } from "lucide-react"
+import { AddCardControl } from "@/components/templates/add-card-control"
 import { ColumnSwatch } from "./column-swatch"
 import { ColumnTitle } from "./column-title"
-import { AddCardBlockedToast } from "@/components/toasts/add-card-blocked/add-card-blocked-toast"
 
 interface IProps {
   title: string
@@ -17,8 +17,8 @@ interface IProps {
   onRename?: (title: string) => void
   /** The column menu, where the viewer can act on the column. */
   menu?: ReactNode
-  /** Omit to drop the add-card button. */
-  onAddCard?: () => void
+  /** Omit to drop the add-card button. A draft pre-fills the new card. */
+  onAddCard?: (draft?: CardDraft) => void
   addCardDisabledReason?: string
   /** Drag state and wiring, supplied by the board's `Droppable`. */
   isDraggingOver?: boolean
@@ -98,26 +98,13 @@ export function ColumnView({
         )}
       >
         {onAddCard && (
-          <Button
-            variant="muted"
-            onClick={() => {
-              if (!addCardDisabledReason) return onAddCard()
-              toast.custom(
-                (toastInstance) =>
-                  createElement(AddCardBlockedToast, {
-                    visible: toastInstance.visible,
-                    reason: addCardDisabledReason,
-                  }),
-                { id: "add-card-blocked", duration: 2500 }
-              )
-            }}
-            aria-disabled={!!addCardDisabledReason}
-            aria-label={`Add card to ${title}`}
-            className={cn("mb-3 w-full", addCardDisabledReason && "opacity-50")}
-            tooltip={addCardDisabledReason ?? false}
-          >
-            <Plus />
-          </Button>
+          <AddCardControl
+            appearance="column"
+            label={`Add card to ${title}`}
+            menuLabel={`Add card from template to ${title}`}
+            disabledReason={addCardDisabledReason}
+            onCreate={onAddCard}
+          />
         )}
         <div ref={listRef} {...listProps} className="flex flex-1 flex-col">
           {children}

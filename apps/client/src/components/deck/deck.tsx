@@ -9,6 +9,7 @@ import {
   filterByUsers,
   groupCardsByColumn,
   sortCards,
+  type CardDraft,
   type CardPatch,
 } from "@doska/core"
 import { useLandingSlot } from "@/lib/hooks"
@@ -29,9 +30,9 @@ interface IProps {
   board: Board
   isLoading: boolean
   onToggleBody: (columnId: string, collapsed: boolean) => void
-  onAddCard: (columnId: string) => void
+  onAddCard: (columnId: string, draft?: CardDraft) => void
   /** Creates a card and opens it, for the header's add. */
-  onAddAndOpenCard: (columnId: string) => void
+  onAddAndOpenCard: (columnId: string, draft?: CardDraft) => void
   onAddColumn: () => void
   onReorderColumns: (changed: Board["columns"]) => void
   onChangeColumnColor: (columnId: string, color: string) => void
@@ -117,8 +118,9 @@ export function Deck({
                 onChangeSort={onChangeSort}
                 view={view}
                 onChangeView={onChangeView}
-                onAddCard={() => {
-                  if (orderedColumns[0]) onAddAndOpenCard(orderedColumns[0].id)
+                onAddCard={(draft) => {
+                  if (orderedColumns[0])
+                    onAddAndOpenCard(orderedColumns[0].id, draft)
                 }}
                 addCardDisabledReason={
                   orderedColumns.length === 0
@@ -145,7 +147,7 @@ export function Deck({
                     color={column.color}
                     showBody={showBody}
                     onToggleBody={() => onToggleBody(column.id, showBody)}
-                    onAddCard={() => onAddCard(column.id)}
+                    onAddCard={(draft) => onAddCard(column.id, draft)}
                     addCardDisabledReason={filteredReason}
                     onRename={(title) => onRenameColumn(column.id, title)}
                     onChangeColor={(color) =>

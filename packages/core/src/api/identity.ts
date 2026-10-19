@@ -1,6 +1,6 @@
 import { runtime } from "../runtime"
 import { clearLastBoard } from "../data/last-board"
-import { DASHBOARDS, META_STORE, STORES } from "./constants"
+import { DASHBOARDS, META_STORE, STORES, TEMPLATES } from "./constants"
 import { live } from "./operations/live"
 import { getServerUrl } from "./server"
 import { sync } from "./sync"
@@ -73,6 +73,8 @@ export async function reconcileIdentity(
  */
 async function wipe(): Promise<void> {
   for (const store of STORES) await runtime().db.clear(store)
+  // Same lifetime as the account's boards on this device. Not a synced store.
+  await runtime().db.clear(TEMPLATES)
 
   const cursors = await runtime().db.keys(META_STORE, CURSOR_RANGE)
   for (const key of cursors) await runtime().db.delete(META_STORE, key)
