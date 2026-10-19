@@ -2,6 +2,7 @@ import { Button } from "@doska/ui-kit"
 import { Settings } from "lucide-react"
 import { useState } from "react"
 import { AccountsModal } from "@/components/accounts/accounts-modal"
+import { requestTemplateManager } from "@/components/templates/template-manager-bus"
 import { SettingsModal } from "./settings-modal"
 
 /** Sidebar entry that opens the settings modal. */
@@ -27,6 +28,11 @@ export function SettingsButton() {
           // Stacked dialogs trap focus in each other, so settings steps aside.
           setOpen(false)
           setAccountsOpen(true)
+        }}
+        onOpenTemplates={() => {
+          // Stacked dialogs trap focus in each other, so settings steps aside.
+          setOpen(false)
+          requestTemplateManager()
         }}
       />
       <AccountsModal open={accountsOpen} onOpenChange={setAccountsOpen} />

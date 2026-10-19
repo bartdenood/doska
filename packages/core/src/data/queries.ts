@@ -233,6 +233,15 @@ export function useCardCol(id: string | null) {
   })
 }
 
+/** Every card template on this device, name order. Local — no server involved. */
+export function useTemplates() {
+  return useQuery({
+    queryKey: keys.templates,
+    queryFn: () => api.listTemplates(),
+    networkMode: "always",
+  })
+}
+
 export function useCard(id: string | null) {
   return useQuery({
     queryKey: keys.card(id ?? ""),

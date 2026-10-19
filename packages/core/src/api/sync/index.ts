@@ -1,4 +1,5 @@
 export { startBackgroundSync } from "./background-sync"
+export { mergeRemoteTemplates } from "./drivers/template-channel"
 export { sync } from "./sync-engine"
 export type { SyncState } from "@doska/sync"
 export {

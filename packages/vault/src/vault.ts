@@ -1,4 +1,4 @@
-import type { Card, Column } from "@doska/contract"
+import type { Card, CardTemplate, Column } from "@doska/contract"
 import { CardFile, type CardPatch } from "./card-file"
 import { FILES, fileNameOf } from "./card-format"
 import {
@@ -9,6 +9,11 @@ import {
 } from "./column-folder"
 import { Folders } from "./folders"
 import { Trash } from "./trash"
+import {
+  parseTemplatesFile,
+  TEMPLATES_FILE,
+  templatesFileText,
+} from "./templates-file"
 import { dirOf, stemOf, titleOf } from "./utils"
 import { Written } from "./written"
 
@@ -36,6 +41,21 @@ export interface VaultFiles {
   get(cardId: string, key: string): Promise<Uint8Array>
 }
 
+/**
+ * The device's card templates. Global, so every linked board folder carries
+ * the same list in `_templates.json`. Missing on a vault that doesn't sync
+ * them — an older app never writes or deletes that file.
+ */
+export interface VaultTemplates {
+  /** Every template on this device, tombstones included. */
+  load(): Promise<CardTemplate[]>
+  /**
+   * Merges these records into the device store, by id. Returns whether the
+   * store changed. A missing file is not passed here: absence is not a delete.
+   */
+  merge(remote: CardTemplate[]): Promise<boolean>
+}
+
 export interface VaultOptions {
   fs: VaultFs
   board: VaultBoard
@@ -47,6 +67,10 @@ export interface VaultOptions {
   root: string
   /** Called after the vault changed the board, so the app can refetch. */
   onBoardChange?: () => void
+  /** Card templates, mirrored through `_templates.json` at the folder root. */
+  templates?: VaultTemplates
+  /** Called after the vault merged templates from the folder. */
+  onTemplatesChange?: () => void
   /** A sync that failed. Nothing above the watcher can catch these. */
   onError?: (error: unknown) => void
   /** The folder itself is gone. */
@@ -64,8 +88,15 @@ export class Vault {
   private readonly files?: VaultFiles
   private readonly root: string
   private readonly onBoardChange?: () => void
+  private readonly templates?: VaultTemplates
+  private readonly onTemplatesChange?: () => void
   private readonly onError?: (error: unknown) => void
   private readonly onGone?: () => void
+
+  /** Last `_templates.json` this vault wrote, so the watch doesn't echo it. */
+  private templatesWritten: string | null = null
+  /** A file we already reported as unreadable, so the toast doesn't repeat. */
+  private templatesBroken = false
 
   private readonly written: Written
   private readonly folders: Folders
@@ -81,6 +112,8 @@ export class Vault {
     files,
     root,
     onBoardChange,
+    templates,
+    onTemplatesChange,
     onError,
     onGone,
   }: VaultOptions) {
@@ -90,6 +123,8 @@ export class Vault {
     this.files = files
     this.root = root
     this.onBoardChange = onBoardChange
+    this.templates = templates
+    this.onTemplatesChange = onTemplatesChange
     this.onError = onError
     this.onGone = onGone
     this.written = new Written(fs, root, boardId)
@@ -180,8 +215,48 @@ export class Vault {
     const deleted = new Set(dropped.cards)
     if (await this.syncOrphans(cards, files, deleted, inTrash)) changed = true
 
+    if (await this.syncTemplates()) this.onTemplatesChange?.()
+
     await this.written.save()
     if (changed) this.onBoardChange?.()
+  }
+
+  /**
+   * Merges `_templates.json` into the device list and writes the merged list
+   * back. A missing file means this folder has never stored templates — local
+   * ones are written out, not deleted. A file that doesn't parse is left
+   * untouched. Tombstones inside the file are how a delete travels; deleting
+   * the file is not.
+   */
+  private async syncTemplates(): Promise<boolean> {
+    if (!this.templates) return false
+    const path = `${this.root}/${TEMPLATES_FILE}`
+    const disk = await this.fs.read(path)
+
+    let remote: CardTemplate[] = []
+    if (disk !== null && disk !== this.templatesWritten) {
+      const parsed = parseTemplatesFile(disk)
+      if (parsed === null) {
+        if (!this.templatesBroken) {
+          this.templatesBroken = true
+          this.onError?.(
+            new Error(
+              "Couldn't read _templates.json, so it was left unchanged."
+            )
+          )
+        }
+        return false
+      }
+      this.templatesBroken = false
+      remote = parsed
+    }
+
+    const changed =
+      remote.length > 0 ? await this.templates.merge(remote) : false
+    const text = templatesFileText(await this.templates.load())
+    if (disk !== text) await this.fs.write(path, text)
+    this.templatesWritten = text
+    return changed
   }
 
   /**

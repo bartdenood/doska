@@ -1,9 +1,9 @@
 ---
 title: User guides
 nav: User guides
-description: "Step-by-step guides to the everyday things: syncing a board to a folder or to a server, attaching files to cards, and signing in through your identity provider."
+description: "Step-by-step guides to the everyday things: syncing a board to a folder or to a server, attaching files to cards, starting cards from templates, and signing in through your identity provider."
 order: 1
-updated: "2026-09-02"
+updated: "2026-10-19"
 ---
 
 - [Sync to a local folder](/user-guides/local-sync): keep a board as
@@ -12,5 +12,7 @@ updated: "2026-09-02"
   into your own server so boards sync across devices.
 - [Attachments](/user-guides/attachments): put files and images on a card.
   Needs a server.
+- [Card templates](/user-guides/card-templates): start a card from a saved
+  title, body, tags, and priority. Works offline, and syncs with the account.
 - [Single sign-on](/user-guides/sso): let people sign in through your
   identity provider. Needs a server.

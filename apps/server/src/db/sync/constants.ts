@@ -12,6 +12,9 @@ export const boardsListCounter = () => counter("boards-list")
 
 export const historyCounter = () => counter("history")
 
+/** Card-template counter. Global, like history: each pull filters by user. */
+export const templatesCounter = () => counter("templates")
+
 /** The `counters` row holding a board's next human-readable card number. */
 const cardNumberCounterId = (boardId: string) => `cardno:${boardId}`
 

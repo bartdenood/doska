@@ -20,8 +20,10 @@ To sign in, click the button at the bottom of the sidebar.
 
 The desktop app needs a sync server address to set up the connection. Put in the server address (IP and port, or a domain), as well as the same login and password as in the web setup.
 
+Card templates sync with the account too. A template saved while signed in reaches your other signed-in devices. An older app that doesn't know templates keeps syncing boards as before.
+
 ## Conflicts
 
 Card body: line by line conflict resolution.
 
-Everything else: LWW + HLC sync.
+Everything else: LWW + HLC sync. Card templates follow that too: each field keeps the newer edit, and a delete syncs instead of disappearing.

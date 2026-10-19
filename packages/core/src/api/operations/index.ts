@@ -45,6 +45,18 @@ export { deleteColumn } from "./delete-column"
 export { moveColumn } from "./move-column"
 export { getCard } from "./get-card"
 export { createCard } from "./create-card"
+export type { CardDraft } from "./card-draft"
+export {
+  allTemplates,
+  cardDraftFromTemplate,
+  createTemplate,
+  deleteTemplate,
+  duplicateTemplate,
+  getTemplate,
+  listTemplates,
+  updateTemplate,
+} from "./templates"
+export type { CardTemplate, TemplateInput } from "./templates"
 export { updateCard } from "./update-card"
 export { deleteCard } from "./delete-card"
 export { moveCard } from "./move-card"

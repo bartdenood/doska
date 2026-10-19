@@ -1,13 +1,16 @@
 import { RETENTION_MS } from "@doska/contract"
+import { runtime } from "../../runtime"
 import {
   CARDS,
   COLUMNS,
   DASHBOARDS,
   HISTORY,
+  TEMPLATES,
   type StoreName,
 } from "../constants"
 import { db } from "../db/db"
 import { sync } from "../sync"
+import { allTemplates } from "./template-record"
 
 /**
  * Hard-deletes tombstones past their retention window — the trash emptying
@@ -40,6 +43,13 @@ export async function purgeExpired(now = Date.now()): Promise<number> {
   for (const [store, id] of expired) {
     if (sync.isDirty(store, id)) continue
     await db.hardDelete(store, id)
+    purged += 1
+  }
+
+  for (const template of await allTemplates()) {
+    if (template.deletedAt == null || template.deletedAt >= cutoff) continue
+    if (sync.isDirty(TEMPLATES, template.id)) continue
+    await runtime().db.delete(TEMPLATES, template.id)
     purged += 1
   }
 

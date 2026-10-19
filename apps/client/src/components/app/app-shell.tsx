@@ -9,6 +9,7 @@ import {
   type DeckContextValue,
 } from "@/providers/deck/deck-context"
 import { useIsPanelOpen, useUndoShortcut } from "@/lib/hooks"
+import { TemplateManagerHost } from "@/components/templates/template-manager-host"
 
 interface IProps {
   deck: DeckContextValue
@@ -40,6 +41,7 @@ export function AppShell({ deck, cardCloseHref, children }: IProps) {
               {children}
             </SidebarInset>
             {cardCloseHref && <CardPanel closeHref={cardCloseHref} />}
+            <TemplateManagerHost />
           </SidebarProvider>
         </CardDropProvider>
       </CardRevealProvider>
